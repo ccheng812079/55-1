@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>網站管理登入</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.2.23/dist/vue.global.js"></script>
+</head>
+<body class="bg-light">
+    <div id="app" class="container">
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-6">
+                <div class="card p-4">
+                    <h3 class="text-center">網站管理登入</h3>
+                    <div v-if="step === 1">
+                        <!-- 帳號密碼登入部分 -->
+                        <div class="form-group">
+                            <label for="username">帳號</label>
+                            <input type="text" class="form-control" id="username" v-model="username" placeholder="請輸入帳號" required>
+                        </div>
+                        <div class="form-group mt-2">
+                            <label for="password">密碼</label>
+                            <input type="password" class="form-control" id="password" v-model="password" placeholder="請輸入密碼" required>
+                        </div>
+
+                        <!-- 圖片驗證碼部分 -->
+                        <div class="form-group mt-3">
+                            <label>驗證碼</label>
+                            <div class="d-flex">
+                                <input type="text" class="form-control w-50" v-model="captchaInput" placeholder="請輸入驗證碼" required>
+                                <canvas id="captchaCanvas" class="ml-2" width="100" height="40" @click="refreshCaptcha"></canvas>
+                            </div>
+                            <button class="btn btn-link p-0 mt-1" @click="refreshCaptcha">重新產生驗證碼</button>
+                        </div>
+
+                        <button class="btn btn-primary btn-block mt-3" @click="login">登入</button>
+                    </div>
+
+                    <!-- 第二階驗證：9宮格拖拉驗證部分 -->
+                    <div v-if="step === 2" class="mt-3">
+                        <h5>第二階驗證：請拖動數字，將9宮格正確排列</h5>
+                        <div class="grid-container">
+                            <div class="grid-item"
+                                v-for="(num, index) in grid"
+                                :key="index"
+                                draggable="true"
+                                @dragstart="onDragStart(index)"
+                                @dragover.prevent
+                                @drop="onDrop(index)">
+                                {{ num }}
+                            </div>
+                        </div>
+                        <button class="btn btn-success mt-3" @click="verifyGrid">確認</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    step: 1, // 1: 帳號密碼驗證, 2: 9宮格驗證
+                    username: '',
+                    password: '',
+                    captcha: '',
+                    captchaInput: '',
+                    grid: [],
+                    dragStartIndex: null,
+                };
+            },
+            methods: {
+                login() {
+                    // 本地帳號密碼驗證
+                    if (this.username === 'admin' && this.password === '1234' && this.captchaInput === this.captcha) {
+                        this.generateGrid();
+                        this.step = 2; // 進入第二階驗證
+                    } else {
+                        alert('帳號、密碼或驗證碼錯誤');
+                        this.refreshCaptcha();
+                    }
+                },
+                refreshCaptcha() {
+                    // 生成4位數驗證碼
+                    this.captcha = Math.floor(1000 + Math.random() * 9000).toString();
+                    const canvas = document.getElementById("captchaCanvas");
+                    const ctx = canvas.getContext("2d");
+
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = "#f2f2f2";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.font = "24px Arial";
+                    ctx.fillStyle = "#000";
+                    ctx.fillText(this.captcha, 20, 30);
+                },
+                generateGrid() {
+                    this.grid = [...Array(9).keys()].map(i => i + 1).sort(() => Math.random() - 0.5);
+                },
+                onDragStart(index) {
+                    this.dragStartIndex = index;
+                },
+                onDrop(index) {
+                    const temp = this.grid[index];
+                    this.grid[index] = this.grid[this.dragStartIndex];
+                    this.grid[this.dragStartIndex] = temp;
+                },
+                verifyGrid() {
+                    const correctGrid = [...Array(9).keys()].map(i => i + 1);
+                    if (JSON.stringify(this.grid) === JSON.stringify(correctGrid)) {
+                        alert('登入成功');
+                        // 這裡可以根據需要執行其他操作，例如重定向
+                    } else {
+                        alert('9宮格順序錯誤，請重新排列');
+                    }
+                }
+            },
+            mounted() {
+                this.refreshCaptcha(); // 初始化圖片驗證碼
+            }
+        }).mount('#app');
+    </script>
+
+    <style>
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .grid-item {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 20px;
+            text-align: center;
+            font-size: 20px;
+            cursor: grab;
+        }
+        .grid-item:active {
+            cursor: grabbing;
+        }
+    </style>
+</body>
+</html>
